@@ -1,7 +1,8 @@
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-
+import logging
+from sqlalchemy import text
 from . import crud, models, schemas
 from .database import SessionLocal, engine
 
@@ -65,11 +66,11 @@ def delete_message(message_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Message not found")
     return db_message
 
-# Healthcheck endpoint
 @app.get("/healthcheck")
 def healthcheck(db: Session = Depends(get_db)):
     try:
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         return {"status": "healthy"}
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        logging.error(f"Database connection error: {e}")
         raise HTTPException(status_code=500, detail="Database connection error")
