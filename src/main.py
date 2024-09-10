@@ -1,16 +1,18 @@
+import logging
+
 from fastapi import Depends, FastAPI, HTTPException, status
+from passlib.context import CryptContext
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-import logging
-from sqlalchemy import text
 from . import crud, models, schemas
 from .database import SessionLocal, engine
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel, ConfigDict
 from datetime import datetime, timedelta
-from passlib.context import CryptContext
 from typing import Optional, Annotated
 import jwt
+from sqlalchemy import text
+
+from .models import User
 
 # Secret key to encode JWT
 SECRET_KEY = "your_secret_key"
@@ -23,6 +25,8 @@ app = FastAPI()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 # Dependency
 def get_db():
     db = SessionLocal()
@@ -30,47 +34,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-class User(BaseModel):
-    username: str
-    email: str | None = None
-    full_name: str | None = None
-    disabled: bool | None = None
-
-    model_config = ConfigDict(from_attributes=True)
-
-class UserInDB(User):
-    hashed_password: str
-
-# Fake database
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": pwd_context.hash("secret"),
-        "disabled": False,
-    }
-}
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_user(db, username: str):
-    if username in db:
-        user_dict = db[username]
-        return UserInDB(**user_dict)
-
-def authenticate_user(fake_db, username: str, password: str):
-    user = get_user(fake_db, username)
-    if not user:
-        return False
-    if not verify_password(password, user.hashed_password):
-        return False
-    return user
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -82,7 +45,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -96,20 +59,20 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         token_data = schemas.TokenData(username=username)
     except jwt.PyJWTError:
         raise credentials_exception
-    user = get_user(fake_users_db, username=token_data.username)
+    user = crud.get_user(db, username=token_data.username)
     if user is None:
         raise credentials_exception
     return user
 
-async def get_current_active_user(current_user: User = Depends(get_current_user)):
+async def get_current_active_user(current_user: schemas.User = Depends(get_current_user)):
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 @app.post("/token", response_model=schemas.Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
-    if not user:
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = crud.get_user(db, username=form_data.username)
+    if not user or not pwd_context.verify(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -120,6 +83,14 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/users/", response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = crud.get_user(db, username=user.username)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    return crud.create_user(db=db, user=user)
+
 @app.post("/snakes/", response_model=schemas.Snake)
 def create_snake(snake: schemas.SnakeCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     return crud.create_snake(db=db, snake=snake)
@@ -142,31 +113,28 @@ def delete_snake(snake_id: int, db: Session = Depends(get_db), current_user: Use
     if db_snake is None:
         raise HTTPException(status_code=404, detail="Snake not found")
     return db_snake
-
-# Message endpoints
 @app.post("/messages/", response_model=schemas.Message)
-def create_message(message: schemas.MessageCreate, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+def create_message(message: schemas.MessageCreate, db: Session = Depends(get_db)):
     return crud.create_message(db=db, message=message)
 
 @app.get("/messages/", response_model=list[schemas.Message])
-def read_messages(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+def read_messages(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     messages = crud.get_all_messages(db)
     return messages
 
 @app.get("/messages/{message_id}", response_model=schemas.Message)
-def read_message(message_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+def read_message(message_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     db_message = crud.get_message(db, message_id=message_id)
     if db_message is None:
         raise HTTPException(status_code=404, detail="Message not found")
     return db_message
 
 @app.delete("/messages/{message_id}", response_model=schemas.Message)
-def delete_message(message_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+def delete_message(message_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     db_message = crud.delete_message(db, message_id=message_id)
     if db_message is None:
         raise HTTPException(status_code=404, detail="Message not found")
     return db_message
-
 @app.get("/users/me")
 async def read_users_me(
     current_user: Annotated[User, Depends(get_current_active_user)],

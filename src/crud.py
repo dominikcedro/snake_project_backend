@@ -7,7 +7,9 @@ description: Data schemas for writing / reading data
 from sqlalchemy.orm import Session
 from . import models, schemas
 from datetime import datetime
+from passlib.context import CryptContext
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Snake CRUD operations
 def get_snake(db: Session, snake_id: int):
@@ -64,3 +66,22 @@ def delete_message(db: Session, message_id: int):
         db.delete(db_message)
         db.commit()
     return db_message
+
+
+
+def get_user(db: Session, username: str):
+    return db.query(models.User).filter(models.User.username == username).first()
+
+def create_user(db: Session, user: schemas.UserCreate):
+    hashed_password = pwd_context.hash(user.password)
+    db_user = models.User(
+        username=user.username,
+        email=user.email,
+        full_name=user.full_name,
+        hashed_password=hashed_password,
+        disabled=False
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
