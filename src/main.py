@@ -120,9 +120,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
-
 @app.post("/snakes/", response_model=schemas.Snake)
-def create_snake(snake: schemas.SnakeCreate, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+def create_snake(snake: schemas.SnakeCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     return crud.create_snake(db=db, snake=snake)
 
 @app.get("/snakes/all", response_model=list[schemas.Snake])
@@ -131,14 +130,14 @@ def get_all_snakes(db: Session = Depends(get_db), current_user: User = Depends(g
     return snakes
 
 @app.get("/snakes/{snake_id}", response_model=schemas.Snake)
-def get_snake_by_id(snake_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+def get_snake_by_id(snake_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     db_snake = crud.get_snake(db, snake_id=snake_id)
     if db_snake is None:
         raise HTTPException(status_code=404, detail="Snake not found")
     return db_snake
 
 @app.delete("/snakes/{snake_id}", response_model=schemas.Snake)
-def delete_snake(snake_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+def delete_snake(snake_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     db_snake = crud.delete_snake(db, snake_id=snake_id)
     if db_snake is None:
         raise HTTPException(status_code=404, detail="Snake not found")
