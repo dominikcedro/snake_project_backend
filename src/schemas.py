@@ -1,13 +1,6 @@
-"""
-original author: Dominik Cedro
-created: 2024-08-29
-license: ###
-description: Data schemas for writing / reading data
-"""
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-
 
 class SnakeBase(BaseModel):
     snake_species: str
@@ -42,8 +35,6 @@ class MessageBase(BaseModel):
     title: str
     datetime: Optional[datetime] = None
 
-from pydantic import Field
-
 class MessageCreate(MessageBase):
     datetime: Optional[datetime] = None
 
@@ -53,3 +44,10 @@ class Message(MessageBase):
 
     class Config:
         orm_mode = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: str | None = None

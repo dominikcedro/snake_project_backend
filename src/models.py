@@ -1,12 +1,5 @@
-"""
-original author: Dominik Cedro
-created: 2024-08-29
-license: ###
-description: Data models for snake info. It will contain all crucial information.
-"""
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
-
 from .database import Base
 
 class Snake(Base):
@@ -21,9 +14,10 @@ class Snake(Base):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key = True)
+    id = Column(Integer, primary_key=True)
     username = Column(String(255))
     hashed_password = Column(String(255))
+    disabled = Column(Boolean, default=False)
 
 class Message(Base):
     __tablename__ = "messages"
@@ -33,8 +27,3 @@ class Message(Base):
     body = Column(String(255))
     title = Column(String(255))
     datetime = Column(DateTime)
-
-
-
-
-
