@@ -6,6 +6,7 @@ description: Data schemas for writing / reading data
 """
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 
 class SnakeBase(BaseModel):
@@ -39,13 +40,16 @@ class MessageBase(BaseModel):
     sender: str
     body: str
     title: str
-    datetime: str
+    datetime: Optional[datetime] = None
+
+from pydantic import Field
 
 class MessageCreate(MessageBase):
-    pass
+    datetime: Optional[datetime] = None
 
 class Message(MessageBase):
     id: int
+    datetime: datetime  # Ensure datetime is of type datetime
 
     class Config:
         orm_mode = True

@@ -6,10 +6,16 @@ description: Data schemas for writing / reading data
 """
 from sqlalchemy.orm import Session
 from . import models, schemas
+from datetime import datetime
+
 
 # Snake CRUD operations
 def get_snake(db: Session, snake_id: int):
     return db.query(models.Snake).filter(models.Snake.id == snake_id).first()
+
+
+def get_all_snakes(db: Session):
+    return db.query(models.Snake).all()
 
 def create_snake(db: Session, snake: schemas.SnakeCreate):
     db_snake = models.Snake(
@@ -35,7 +41,12 @@ def delete_snake(db: Session, snake_id: int):
 def get_message(db: Session, message_id: int):
     return db.query(models.Message).filter(models.Message.id == message_id).first()
 
+def get_all_messages(db: Session):
+    return db.query(models.Message).all()
+
 def create_message(db: Session, message: schemas.MessageCreate):
+    if message.datetime is None:
+        message.datetime = datetime.utcnow()
     db_message = models.Message(
         sender=message.sender,
         body=message.body,

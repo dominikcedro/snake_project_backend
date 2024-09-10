@@ -23,10 +23,17 @@ def get_db():
 def create_snake(snake: schemas.SnakeCreate, db: Session = Depends(get_db)):
     return crud.create_snake(db=db, snake=snake)
 
-@app.get("/snakes/", response_model=list[schemas.Snake])
-def read_snakes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    snakes = crud.get_snakes(db, skip=skip, limit=limit)
+@app.get("/snakes/all", response_model=list[schemas.Snake])
+def get_all_snakes(db: Session = Depends(get_db)):
+    snakes = crud.get_all_snakes(db)
     return snakes
+
+@app.get("/snakes/{snake_id}", response_model=schemas.Snake)
+def get_snake_by_id(snake_id: int, db: Session = Depends(get_db)):
+    db_snake = crud.get_snake(db, snake_id=snake_id)
+    if db_snake is None:
+        raise HTTPException(status_code=404, detail="Snake not found")
+    return db_snake
 
 @app.get("/snakes/{snake_id}", response_model=schemas.Snake)
 def read_snake(snake_id: int, db: Session = Depends(get_db)):
@@ -49,7 +56,7 @@ def create_message(message: schemas.MessageCreate, db: Session = Depends(get_db)
 
 @app.get("/messages/", response_model=list[schemas.Message])
 def read_messages(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    messages = crud.get_messages(db, skip=skip, limit=limit)
+    messages = crud.get_all_messages(db)
     return messages
 
 @app.get("/messages/{message_id}", response_model=schemas.Message)
