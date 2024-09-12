@@ -7,7 +7,7 @@ from passlib.context import CryptContext
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from typing import Optional, Annotated
+from typing import Optional, Annotated, List
 import jwt
 from . import crud, models, schemas
 from .database import SessionLocal, engine
@@ -25,7 +25,8 @@ app = FastAPI()
 # CORS settings
 origins = [
     "http://localhost:3000",  # React app URL
-    "http://127.0.0.1:3000",  # React app URL
+    "http://127.0.0.1:3000",
+    "http://localhost:5173", # React app URL
 ]
 
 app.add_middleware(
@@ -107,9 +108,9 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 def create_snake(snake: schemas.SnakeCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     return crud.create_snake(db=db, snake=snake)
 
-@app.get("/snakes/all", response_model=list[schemas.Snake])
-def get_all_snakes(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-    snakes = crud.get_all_snakes(db)
+@app.get("/snakes/", response_model=List[schemas.Snake]) # implemented pagination for "view more" button
+def get_snakes(skip: int = 0, limit: int = 6, db: Session = Depends(get_db)):
+    snakes = crud.get_all_snakes(db, skip=skip, limit=limit)
     return snakes
 
 @app.get("/snakes/{snake_id}", response_model=schemas.Snake)

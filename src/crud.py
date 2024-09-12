@@ -16,8 +16,8 @@ def get_snake(db: Session, snake_id: int):
     return db.query(models.Snake).filter(models.Snake.id == snake_id).first()
 
 
-def get_all_snakes(db: Session):
-    return db.query(models.Snake).all()
+def get_all_snakes(db: Session, skip: int = 0, limit: int = 6):
+    return db.query(models.Snake).offset(skip).limit(limit).all()
 
 def create_snake(db: Session, snake: schemas.SnakeCreate):
     db_snake = models.Snake(
