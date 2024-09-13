@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import text
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
@@ -10,8 +10,11 @@ from datetime import datetime, timedelta
 from typing import Optional, Annotated, List
 import jwt
 from . import crud, models, schemas
+from .cloudinary import upload_image
 from .database import SessionLocal, engine
 from .models import User
+from fastapi import File
+
 
 # Secret key to encode JWT
 SECRET_KEY = "your_secret_key"
@@ -104,9 +107,35 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Username already registered")
     return crud.create_user(db=db, user=user)
 
+
+from fastapi import Form
+
 @app.post("/snakes/", response_model=schemas.Snake)
-def create_snake(snake: schemas.SnakeCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-    return crud.create_snake(db=db, snake=snake)
+async def create_snake(
+    snake_species: str = Form(...),
+    snake_description: str = Form(...),
+    snake_sex: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    try:
+        # Upload the image and get the URL
+        url = await upload_image(file)
+        # Create the snake object with the image URL
+        snake = schemas.SnakeCreate(
+            snake_species=snake_species,
+            snake_description=snake_description,
+            snake_sex=snake_sex,
+            snake_image=url
+        )
+        # Create the snake in the database
+        return crud.create_snake(db=db, snake=snake)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating snake: {str(e)}"
+        )
 
 @app.get("/snakes/", response_model=List[schemas.Snake]) # implemented pagination for "view more" button
 def get_snakes(skip: int = 0, limit: int = 6, db: Session = Depends(get_db)):
@@ -120,12 +149,29 @@ def get_snake_by_id(snake_id: int, db: Session = Depends(get_db), current_user: 
         raise HTTPException(status_code=404, detail="Snake not found")
     return db_snake
 
+
+from cloudinary.uploader import destroy
+
+
 @app.delete("/snakes/{snake_id}", response_model=schemas.Snake)
 def delete_snake(snake_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-    db_snake = crud.delete_snake(db, snake_id=snake_id)
+    db_snake = crud.get_snake(db, snake_id=snake_id)
     if db_snake is None:
         raise HTTPException(status_code=404, detail="Snake not found")
+
+    # Delete the image from Cloudinary
+    try:
+        destroy(db_snake.snake_image)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting image from Cloudinary: {str(e)}"
+        )
+
+    # Delete the snake from the database
+    db_snake = crud.delete_snake(db, snake_id=snake_id)
     return db_snake
+
 @app.post("/messages/", response_model=schemas.Message)
 def create_message(message: schemas.MessageCreate, db: Session = Depends(get_db)):
     return crud.create_message(db=db, message=message)
@@ -154,7 +200,7 @@ async def read_users_me(
 ):
     return current_user
 
-@app.get("/healthcheck")
+@app.get("/healthcheckkkk")
 def healthcheck(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     try:
         db.execute(text("SELECT 1"))
@@ -162,3 +208,19 @@ def healthcheck(db: Session = Depends(get_db), token: str = Depends(oauth2_schem
     except SQLAlchemyError as e:
         logging.error(f"Database connection error: {e}")
         raise HTTPException(status_code=500, detail="Database connection error")
+
+
+@app.post("/upload")
+async def handle_upload(file: UploadFile, db: Session = Depends(get_db)):
+    try:
+        url = await upload_image(file)
+        return {
+            "data": {
+                "url": url
+            }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error uploading images: {str(e)}"
+        )
