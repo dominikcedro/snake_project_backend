@@ -9,6 +9,7 @@
             "libmysqlclient-dev"
           ],
           "commands": [
+            "pip install mysqlclient==2.1.0",
             "pip install -r requirements.txt"
           ]
         }
