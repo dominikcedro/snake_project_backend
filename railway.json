@@ -9,9 +9,11 @@
             "python3-dev",
             "default-libmysqlclient-dev",
             "build-essential",
-            "pkg-config"
+            "pkg-config",
+            "libmysqlclient-dev"
           ],
           "commands": [
+            "echo 'Running install phase...'",
             "pip install mysqlclient==2.1.0",
             "pip install -r requirements.txt"
           ]
