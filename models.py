@@ -1,8 +1,8 @@
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
-from .database import Base
+from database import Base
 from sqlalchemy import Boolean, Column, Integer, String
-from .database import Base
+from database import Base
 
 class Snake(Base):
     __tablename__ = "snakes"

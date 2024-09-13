@@ -1,4 +1,6 @@
 import logging
+
+import jwt
 from sqlalchemy import text
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,13 +10,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Optional, Annotated, List
-import jwt
 import models
 import crud
 import schemas
-from .cloudinary import upload_image
-from .database import SessionLocal, engine
-from .models import User
+from cloudinary.uploader import upload_image, destroy
+from database import SessionLocal, engine
+from models import User
 from fastapi import File
 
 
@@ -152,7 +153,6 @@ def get_snake_by_id(snake_id: int, db: Session = Depends(get_db), current_user: 
     return db_snake
 
 
-from cloudinary.uploader import destroy
 
 
 @app.delete("/snakes/{snake_id}", response_model=schemas.Snake)
