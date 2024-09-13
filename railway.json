@@ -1,5 +1,9 @@
 {
+  "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "type": "docker"
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "hypercorn main:app --bind \"[::]:$PORT\""
   }
 }
