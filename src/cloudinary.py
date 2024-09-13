@@ -1,32 +1,24 @@
-import json
 import os
 
 import cloudinary
 import cloudinary.uploader
 from cloudinary.uploader import upload
 from fastapi import HTTPException, status, UploadFile
+from dotenv import load_dotenv
 
-# Configuration
+load_dotenv()
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
+cloud_name = os.getenv('CLOUDINARY_CLOUD_NAME')
+api_key = os.getenv('CLOUDINARY_API_KEY')
+api_secret = os.getenv('CLOUDINARY_API_SECRET')
+secure = os.getenv('CLOUDINARY_SECURE', 'True').lower() in ('true', '1', 't')
 
-config_path = os.path.join(dir_path, 'cloudinary_config.json')
-
-with open(config_path) as f:
-    config = json.load(f)
-    cloud_name = config['cloud_name']
-    api_key = config['api_key']
-    api_secret = config['api_secret']
-    secure = config['secure']
-
-    cloudinary.config(
-        cloud_name=cloud_name,
-        api_key=api_key,
-        api_secret=api_secret,
-        secure=secure
-    )
-
-# Upload an image
+cloudinary.config(
+    cloud_name=cloud_name,
+    api_key=api_key,
+    api_secret=api_secret,
+    secure=secure
+)
 
 async def upload_image(image: UploadFile):
     try:

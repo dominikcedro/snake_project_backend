@@ -9,18 +9,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
-import json
+from dotenv import load_dotenv
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
+load_dotenv()
 
-config_path = os.path.join(dir_path, 'database_config.json')
-
-with open(config_path) as f:
-    config = json.load(f)
-    username = config['username']
-    password = config['password']
-    host = config['host']
-    database_name = config['database_name']
+username = os.getenv('DB_USERNAME')
+password = os.getenv('DB_PASSWORD')
+host = os.getenv('DB_HOST')
+database_name = os.getenv('DB_NAME')
 
 SQLALCHEMY_DATABASE_URL = f'mysql://{username}:{password}@{host}:3306/{database_name}'
 
@@ -29,4 +25,3 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
-
