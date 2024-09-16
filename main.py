@@ -22,6 +22,7 @@ from cloudinary.uploader import upload_image, destroy
 from database import SessionLocal, engine
 from models import User
 from fastapi import File
+from starlette.middleware.cors import CORSMiddleware
 
 
 # Secret key to encode JWT
@@ -33,12 +34,9 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# CORS settings
-origins = ["*"]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
