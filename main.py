@@ -33,20 +33,16 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# # CORS settings
-# origins = [
-#     "http://localhost:3000",  # React app URL
-#     "http://127.0.0.1:3000",
-#     "http://localhost:5173", # React app URL
-# ]
-#
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=origins,
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
+# CORS settings
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
