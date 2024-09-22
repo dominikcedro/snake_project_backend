@@ -112,10 +112,14 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 from fastapi import Form
 from cloudinary.uploader import upload
-
+from icecream import ic
 async def upload_image(file: UploadFile):
+    ic("Reading file content")
     result = await file.read()
+    ic("File read success")
     upload_result = upload(result)
+    ic("File uploaded to ", upload_result)
+
     return upload_result['url']
 
 @app.post("/snakes/", response_model=schemas.Snake)
@@ -128,16 +132,26 @@ async def create_snake(
     current_user: User = Depends(get_current_active_user)
 ):
     try:
+        ic("Starting file upload process...")
+
         file_content = await file.read()  # Ensure the file content is read correctly
+        ic("File content read:", file_content[:100])  # Log first 100 bytes of file content
+
         url = upload(file_content)['url']  # Upload the file content and get the URL
+        ic("File uploaded to Cloudinary, URL:", url)
+
         snake = schemas.SnakeCreate(
             snake_species=snake_species,
             snake_description=snake_description,
             snake_sex=snake_sex,
             snake_image=url
         )
+        ic("Creating snake in the database...")
+
         return crud.create_snake(db=db, snake=snake)
     except Exception as e:
+        ic("Error creating snake:", str(e))
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error creating snake: {str(e)}"
