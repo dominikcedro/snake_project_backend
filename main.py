@@ -111,6 +111,12 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 from fastapi import Form
+from cloudinary.uploader import upload
+
+async def upload_image(file: UploadFile):
+    result = await file.read()
+    upload_result = upload(result)
+    return upload_result['url']
 
 @app.post("/snakes/", response_model=schemas.Snake)
 async def create_snake(
@@ -122,16 +128,14 @@ async def create_snake(
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        # Upload the image and get the URL
-        url = await upload_image(file)
-        # Create the snake object with the image URL
+        file_content = await file.read()  # Ensure the file content is read correctly
+        url = upload(file_content)['url']  # Upload the file content and get the URL
         snake = schemas.SnakeCreate(
             snake_species=snake_species,
             snake_description=snake_description,
             snake_sex=snake_sex,
             snake_image=url
         )
-        # Create the snake in the database
         return crud.create_snake(db=db, snake=snake)
     except Exception as e:
         raise HTTPException(
