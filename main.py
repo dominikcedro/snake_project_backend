@@ -1,10 +1,15 @@
+"""
+original author: Dominik Cedro
+created: 2024-07-01
+license: GSB 3.0
+description: Main script for security setup, endpoint operation and app config
+"""
 from dotenv import load_dotenv
 import os
 
-load_dotenv()  # Load environment variables from a .env file
+load_dotenv()
 
 import logging
-
 import jwt
 from sqlalchemy import text
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile
@@ -23,9 +28,11 @@ from database import SessionLocal, engine
 from models import User
 from fastapi import File
 from starlette.middleware.cors import CORSMiddleware
+from fastapi import Form
+from cloudinary.uploader import upload
+from icecream import ic
 
-
-# Secret key to encode JWT
+# Security setup
 SECRET_KEY = os.getenv("SECRET_HASH_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -34,6 +41,7 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+# CORS setup for traffic with frontend page
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -46,7 +54,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Dependency
+# Dependency for db
 def get_db():
     db = SessionLocal()
     try:
@@ -54,6 +62,7 @@ def get_db():
     finally:
         db.close()
 
+# Security setup
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
@@ -102,6 +111,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+# USER endpoints
 @app.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user(db, username=user.username)
@@ -109,10 +120,14 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Username already registered")
     return crud.create_user(db=db, user=user)
 
+@app.get("/users/me")
+async def read_users_me(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    return current_user
 
-from fastapi import Form
-from cloudinary.uploader import upload
-from icecream import ic
+# SNAKE endpoints
+
 async def upload_image(file: UploadFile):
     ic("Reading file content")
     result = await file.read()
@@ -121,6 +136,22 @@ async def upload_image(file: UploadFile):
     ic("File uploaded to ", upload_result)
 
     return upload_result['url']
+
+@app.post("/upload")
+async def handle_upload(file: UploadFile, db: Session = Depends(get_db)):
+    try:
+        url = await upload_image(file)
+        return {
+            "data": {
+                "url": url
+            }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error uploading images: {str(e)}"
+        )
+
 
 @app.post("/snakes/", response_model=schemas.Snake)
 async def create_snake(
@@ -169,9 +200,6 @@ def get_snake_by_id(snake_id: int, db: Session = Depends(get_db), current_user: 
         raise HTTPException(status_code=404, detail="Snake not found")
     return db_snake
 
-
-
-
 @app.delete("/snakes/{snake_id}", response_model=schemas.Snake)
 def delete_snake(snake_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     db_snake = crud.get_snake(db, snake_id=snake_id)
@@ -191,6 +219,7 @@ def delete_snake(snake_id: int, db: Session = Depends(get_db), current_user: Use
     db_snake = crud.delete_snake(db, snake_id=snake_id)
     return db_snake
 
+# MESSAGE endpoints
 @app.post("/messages/", response_model=schemas.Message)
 def create_message(message: schemas.MessageCreate, db: Session = Depends(get_db)):
     return crud.create_message(db=db, message=message)
@@ -213,33 +242,13 @@ def delete_message(message_id: int, db: Session = Depends(get_db), current_user:
     if db_message is None:
         raise HTTPException(status_code=404, detail="Message not found")
     return db_message
-@app.get("/users/me")
-async def read_users_me(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-):
-    return current_user
 
-@app.get("/healthcheckkkk")
+# HEALTH CHECK
+@app.get("/")
 def healthcheck(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     try:
         db.execute(text("SELECT 1"))
-        return {"status": "healthy"}
+        return {"status": "online"}
     except SQLAlchemyError as e:
         logging.error(f"Database connection error: {e}")
         raise HTTPException(status_code=500, detail="Database connection error")
-
-
-@app.post("/upload")
-async def handle_upload(file: UploadFile, db: Session = Depends(get_db)):
-    try:
-        url = await upload_image(file)
-        return {
-            "data": {
-                "url": url
-            }
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error uploading images: {str(e)}"
-        )

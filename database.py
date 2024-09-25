@@ -1,3 +1,9 @@
+"""
+original author: Dominik Cedro
+created: 2024-07-01
+license: GSB 3.0
+description: Database setup with SQLalchemy using env
+"""
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker

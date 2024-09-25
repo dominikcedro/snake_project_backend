@@ -1,8 +1,8 @@
 """
 original author: Dominik Cedro
 created: 2024-08-29
-license: ###
-description: Data schemas for writing / reading data
+license: BSD 3.0
+description: functions for handling CRUD operations on mySQL DB
 """
 from sqlalchemy.orm import Session
 import models
@@ -15,7 +15,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Snake CRUD operations
 def get_snake(db: Session, snake_id: int):
     return db.query(models.Snake).filter(models.Snake.id == snake_id).first()
-
 
 def get_all_snakes(db: Session, skip: int = 0, limit: int = 6):
     return db.query(models.Snake).offset(skip).limit(limit).all()
@@ -67,8 +66,6 @@ def delete_message(db: Session, message_id: int):
         db.delete(db_message)
         db.commit()
     return db_message
-
-
 
 def get_user(db: Session, username: str):
     return db.query(models.User).filter(models.User.username == username).first()

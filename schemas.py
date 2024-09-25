@@ -1,3 +1,9 @@
+"""
+original author: Dominik Cedro
+created: 2024-07-01
+license: GSB 3.0
+description: Schemas for CRUD operations on databse objects
+"""
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -20,8 +26,8 @@ class Snake(SnakeBase):
 
 class UserBase(BaseModel):
     username: str
-    email: str | None = None
-    full_name: str | None = None
+    # email: str | None = None
+    # full_name: str | None = None
     disabled: bool | None = None
 
 class UserCreate(UserBase):
@@ -35,6 +41,7 @@ class User(UserBase):
 
 class UserInDB(User):
     hashed_password: str
+
 class MessageBase(BaseModel):
     sender: str
     body: str

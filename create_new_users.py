@@ -1,4 +1,9 @@
-# admin_create_user.py
+"""
+original author: Dominik Cedro
+created: 2024-08-29
+license: BSD 3.0
+description: Script to create new user from server side
+"""
 from sqlalchemy.orm import Session
 from .database import SessionLocal
 import crud

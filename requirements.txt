@@ -37,7 +37,12 @@ Pygments==2.18.0
 PyGObject==3.42.1
 PyJWT==2.3.0
 PyMySQL==1.1.1
-pyparsing==2.4.7
+pyparsing==2.4.7# Step 1: Install build tools
+sudo apt-get update
+sudo apt-get install -y build-essential python3-dev
+
+# Step 2: Install PyYAML using a pre-built wheel
+pip install PyYAML==5.4.1
 python-dotenv==1.0.1
 python-multipart==0.0.9
 SecretStorage==3.3.1

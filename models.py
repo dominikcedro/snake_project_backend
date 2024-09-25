@@ -1,3 +1,9 @@
+"""
+original author: Dominik Cedro
+created: 2024-07-01
+license: GSB 3.0
+description: sqlalchemy models for mySQL database
+"""
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 from database import Base
@@ -20,8 +26,8 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(255), unique=True, index=True)
-    email = Column(String(255), unique=True, index=True, nullable=True)
-    full_name = Column(String(255), nullable=True)
+    # email = Column(String(255), unique=True, index=True, nullable=True)
+    # full_name = Column(String(255), nullable=True)
     hashed_password = Column(String(255))
     disabled = Column(Boolean, default=False)
 

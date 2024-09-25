@@ -1,5 +1,11 @@
-import os
+"""
+original author: Dominik Cedro
+created: 2024-08-12
+license: BSD 3.0
+description: setup for cloud service Cloudinary and utility functions.
+"""
 
+import os
 import cloudinary
 import cloudinary.uploader
 from cloudinary.uploader import upload
