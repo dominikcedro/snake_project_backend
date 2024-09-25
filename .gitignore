@@ -136,3 +136,7 @@ cython_debug/
 .vscode/
 
 ./res/cloudinary.py
+
+# SSL certificates
+key.pem
+cert.pem

@@ -26,7 +26,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 
 # Secret key to encode JWT
-SECRET_KEY = "your_secret_key"
+SECRET_KEY = os.getenv("SECRET_HASH_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -36,7 +36,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
