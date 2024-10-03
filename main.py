@@ -12,7 +12,8 @@ load_dotenv()
 import logging
 import jwt
 from sqlalchemy import text
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, Request
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
@@ -49,6 +50,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def redirect_to_https(request: Request, call_next):
+    if request.url.scheme == "http":
+        url = request.url.replace(scheme="https")
+        return RedirectResponse(url)
+    response = await call_next(request)
+    return response
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -188,7 +198,7 @@ async def create_snake(
             detail=f"Error creating snake: {str(e)}"
         )
 
-@app.get("/snakes/", response_model=List[schemas.Snake]) # implemented pagination for "view more" button
+@app.get("/snakes/", response_model=List[schemas.Snake])
 def get_snakes(skip: int = 0, limit: int = 6, db: Session = Depends(get_db)):
     snakes = crud.get_all_snakes(db, skip=skip, limit=limit)
     return snakes
@@ -245,7 +255,7 @@ def delete_message(message_id: int, db: Session = Depends(get_db), current_user:
 
 # HEALTH CHECK
 @app.get("/")
-def healthcheck(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+def healthcheck(db: Session = Depends(get_db)):
     try:
         db.execute(text("SELECT 1"))
         return {"status": "online"}
